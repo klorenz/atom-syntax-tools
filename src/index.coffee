@@ -101,7 +101,7 @@ makeGrammar = (grammar, print = false) ->
       G.repository[k] = make_pattern(v, macros)
 
   if print
-    if options.print == "CSON"
+    if print == "CSON"
       CSON = require "CSON"
       process.stdout.write CSON.stringify(G)
     else
