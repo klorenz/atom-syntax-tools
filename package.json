@@ -1,0 +1,28 @@
+{
+  "name": "atom-syntax-tools",
+	  "version": "0.1.1",
+  "description": "Tool for grammar specification with coffee script for atom languages",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klorenz/atom-syntax-tools.git"
+  },
+  "keywords": [
+    "atom",
+    "language",
+    "syntax"
+  ],
+  "author": "Kay-Uwe (Kiwi) Lorenz <kiwi@franka.dyndns.org>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/klorenz/atom-syntax-tools/issues"
+  },
+  "devDependencies": {
+    "coffee-script": "*"
+  },
+  "homepage": "https://github.com/klorenz/atom-syntax-tools"
+
+}
