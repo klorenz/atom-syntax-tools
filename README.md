@@ -14,6 +14,22 @@ Tools for easier language grammar specification for atom editor.
 
 - grammar scopename is autoappended to scopenames
 
+- you can shortcut the keys like follows:
+
+  | shortcut |          name          |
+  | :------: | ---------------------- |
+  |    n     | name                   |
+  |    N     | contentName            |
+  |    p     | patterns               |
+  |    i     | include                |
+  |    m     | match                  |
+  |    b     | begin                  |
+  |    e     | end                    |
+  |    c     | captures/beginCaptures |
+  |    C     | endCaptures            |
+  |    L     | applyEndPatternLast    |
+
+
 Here a little example, how to produce `json.cson` file:
 
 ```coffeescript

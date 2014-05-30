@@ -4,7 +4,7 @@
   "description": "Tool for grammar specification with coffee script for atom languages",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cake test"
   },
   "repository": {
     "type": "git",
@@ -15,7 +15,7 @@
     "language",
     "syntax"
   ],
-  "author": "Kay-Uwe (Kiwi) Lorenz <kiwi@franka.dyndns.org>",
+  "author": "Kay-Uwe (Kiwi) Lorenz <kiwi@franka.dyndns.org> (http://quelltexter.org)",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/klorenz/atom-syntax-tools/issues"
@@ -25,8 +25,7 @@
     "jasmine-focused": "*"
   },
   "engines": {
-    "atom": "*"
+    "atom": ">=0.90"
   },
   "homepage": "https://github.com/klorenz/atom-syntax-tools"
-
 }
