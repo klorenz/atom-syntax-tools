@@ -1,6 +1,6 @@
 {
   "name": "atom-syntax-tools",
-	  "version": "0.1.2",
+  "version": "0.1.0",
   "description": "Tool for grammar specification with coffee script for atom languages",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,11 @@
     "url": "https://github.com/klorenz/atom-syntax-tools/issues"
   },
   "devDependencies": {
-    "coffee-script": "*"
+    "coffee-script": "*",
+    "jasmine-focused": "*"
+  },
+  "engines": {
+    "atom": "*"
   },
   "homepage": "https://github.com/klorenz/atom-syntax-tools"
 

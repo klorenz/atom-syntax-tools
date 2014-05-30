@@ -2,3 +2,160 @@ atom-syntax-tools
 =================
 
 Tools for easier language grammar specification for atom editor.
+
+- This tool lets you define grammar in a coffeescript file and takes the input
+  cson, and generates a full grammar cson.
+
+- Make use of syntax highlighting of javascript regular expressions, which
+  will be used as Oniguruma Regexes.  This way you do not need escape too
+  much.
+
+- make use of macros in scopenames and regexes
+
+- grammar scopename is autoappended to scopenames
+
+Here a little example, how to produce `json.cson` file:
+
+```coffeescript
+{makeGrammar} = require('atom-syntax-tools')
+
+grammar =
+  name: "JSON"
+  scopeName: "source.json"
+  keyEquivalent: "^~J"
+  fileTypes: [ "json" ]
+
+  macros:
+    # for demonstartion purpose, how to use regexes as macros
+    hexdigit: /[0-9a-fA-F]/
+    en: "entity.name"
+    pd: "punctuation.definition"
+    ps: "punctuation.separator"
+    ii: "invalid.illegal"
+
+  patterns: [
+    "#value"
+  ]
+
+  repository:
+    array:
+      n: "meta.structure.array"
+      b: /\[/
+      c: "{pd}.array.begin"
+      e: /\]/
+      C: "{pd}.array.end"
+      p: [
+        "#value"
+        {
+          m: /,/
+          n: "{ps}.array"
+        }
+        {
+          m: /[^\s\]]/
+          n: "{ii}.expected-array-separator"
+        }
+      ]
+    constant:
+      n: "constant.language"
+      m: /\b(?:true|false|null)\b/
+    number:
+      # this comment is just for demonstration, you will rather use
+      # normal coffee comments
+      comment: "handles integer and decimal numbers"
+      n: "constant.numeric"
+      # This multiline match with be boiled down into a single linen regular
+      # expression. See http://coffeescript.org
+      m: ///
+        -?        # an optional minus
+        (?:
+          0       # a zero
+        |         # ...or...
+          [1-9]   # a 1-9 character
+          \d*     # followed by zero or more digits
+        )
+        (?:
+          (?:
+            \.    # a period
+            \d+   # followed by one or more digits
+          )?
+          (?:
+            [eE]  # an e character
+            [+-]? # followed by an optional +/-
+            \d+   # followed by one of more digits
+          )?      # make exponent optional
+        )?        # make decimal portion optional
+      ///
+    object:
+      # "a JSON object"
+      n: "meta.structure.dictionary"
+      b: /\{/
+      c: "{pd}.dictionary.begin"
+      e: /\}/
+      C: "{pd}.dictionary.end"
+      p: [
+        "#string"   # JSON object key
+        {
+          b: /:/
+          c: "{ps}.dictionary.key-value"
+          e: /(,)|(?=\})/
+          C:
+            1: "{ps}.dictionary.pair"
+          n: "meta.structure.dictionary.value"
+          p: [
+            "#value" # JSON object value
+            { m: /[^\s,]/, n: "{ii}.expected-dictionary-separator" }
+          ]
+        }
+        {
+          m: /[^\s\}]/
+          n: "{ii}.expected-dictionary-separator"
+        }
+      ]
+    string:
+      b: /"/
+      c: "{pd}.string.begin"
+      e: /"/
+      C: "{pd}.definition.string.end"
+      n: "string.quoted.double"
+      p: [
+        {
+          n: "constant.character.escape"
+          m: ///
+            \\               # literal backslash
+            (?:              # ...followed by...
+              ["\\/bfnrt]    # one of these characters
+              |              # ...or...
+              u              # a u
+              {hexdigit}{4}  # and four hex digits
+            )
+          ///
+        }
+        {
+          m: /\\./
+          n: "{ii}.unrecognized-string-escape"
+        }
+      ]
+    value: [     # the 'value' diagram at http://json.org
+      "#constant"
+      "#number"
+      "#string"
+      "#array"
+      "#object"
+    ]
+
+makeGrammar grammar, "CSON"
+```
+
+Then run your script with `coffee grammar-json.coffee > json.cson`
+
+
+Further Infos
+-------------
+
+See spec for examples.  More documentation will follow.
+
+
+TODO
+----
+
+Support grammar injections.

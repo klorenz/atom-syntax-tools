@@ -2,79 +2,89 @@ makeGrammar = require '../index.js'
 
 describe "Atom Syntax Tools", ->
 
-  inputGrammar =
+  describe "when you use macros in regexes", ->
+    inputGrammar =
+      scopeName: "source.my-grammar-1"
+      macros:
+        nested_item: /{ident}\[{item_getter}\]/
+        ident: /[a-zA-Z_]\w*/
+        digits: /\d+/
+        item_getter: /(?:{digits}|{ident})/
 
-    macros:
-      openers:            /"'\(\<\[\{/
-      closers:            /"'\)\>\]\}/
-      delimiters:         /\-\/\:=\+\*/
-      closing_delimiters: /\.\,\;\!\?/
-      hws:                /[\t\x{00000020}]/
-      section_char:       /[=\-`:.'"~^_*+\#]/
-      indent:             /{hws}*/
+      patterns: [
+        { match: /// {ident} /// }
+        { match: /// {nested_item} /// }
+      ]
 
-    patterns: [
-      "#block"
-    ]
+    it "expands simple macros", ->
+      g = makeGrammar inputGrammar
+      expect(g.patterns[0].match).toBe("[a-zA-Z_]\\w*")
 
-    repository:
-      block:
-        n: 'meta.block.restructuredtext'
-        b: /^(?=({hws}*))/
-        e: /^(?!($|\1))/
-        p: [
-          '#headline'
-          '#directive'
-          '#parameter'
-        ]
+    it "expands nested macros", ->
+      g = makeGrammar inputGrammar
+      expect(g.patterns[1].match).toBe("[a-zA-Z_]\\w*\\[(?:\\d+|[a-zA-Z_]\\w*)\\]")
 
-      headline:
-        x: on
-        n: scope 'markup.heading.headline'
-        m: /// ({indent}) (.*)\n \1 ((section_char)\2+)\n ///
-        c:
-          1:
-            n: scope 'e.n.section'
-            p: '#inline'
-          2:
-            n: scope 'kw.op.section'
 
-      headline_with_overline:
-        x: on
-        n: scope 'markup.heading.headline'
-        m: /// ({indent}) ((section_char)\3+) \n \1 (.*)\n \1 (\2) \n ///
-        c:   # 1          23                        4         5
-          2:
-            n: scope 'kw.op.section'
-          4:
-            n: scope 'e.n.section'
-            p: '#inline'
-          5:
-            n: scope 'kw.op.section'
+  describe "when you want to keep your grammar short", ->
 
-      directive:
-        x: on
-        n: scope 'meta.block.directive'
-        b: /// ({indent}) (\.\.) {hws} ({ident}) (::)
-             # 1          2            3
-             # argument
-               ( (?:{hws}.+\n|\n)   # first line
-                 (?: (?=(\1{hws}+)) # 5 indentation lookahead
-                     (?: \5 (?!:{ident}:) .+\n)*))
-             # 4
-             # keyword arguments
-           ///
-        c:
-          2: n: scope 'kw.op.directive'
-          3: n: scope 'kw.directive'
-          4: n: scope 'string.other.directive.argument'
+    inputGrammar =
+      scopeName: "source.my-grammar"
 
-        e: /// (?!($|\1{hws})) ///
+      patterns: [
+        "#block"
+        {i: "#another-one"}
+      ]
 
-        p: [
-          '#keywordarg'
-        ]
+      repository:
+        block:
+          n: "string.quoted.double.my-grammar"
+          N: "constant.character.escape.my-grammar"
+          b: /// begin here ///
+          c: { 1: "hello" }
+          e: /// end here ///
+          C: { 2: "world" }
+          p: [ "#match" ]
 
-  it "lets you use macros in regexes", ->
-    grammar = makeGrammar inputGrammar
-    grammar.
+        match:
+          m: /// match ///
+          c: { 1: "hello world" }
+
+    it "lets you abbreviate name with n", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].name).toBe("string.quoted.double.my-grammar")
+
+    it "lets you abbreviate contentName with N", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].contentName).toBe("constant.character.escape.my-grammar")
+
+    it "lets you abbreviate begin with b", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].begin).toBe("beginhere")
+
+    it "lets you abbreviate end with e", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].end).toBe("endhere")
+
+    it "lets you abbreviate beginCaptures with c, if you used begin regex", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].beginCaptures).toEqual {1: { "name": "hello.my-grammar"} }
+
+    it "lets you abbreviate endCaptures with C", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].endCaptures).toEqual {2: { name: "world.my-grammar"} }
+
+    it "lets you use a string instead of object with include key", ->
+      g = makeGrammar inputGrammar
+      expect(g.patterns[0]).toEqual {include: "#block"}
+
+    it "lets you abbreviate include with i", ->
+      g = makeGrammar inputGrammar
+      expect(g.patterns[1].include).toBe "#another-one"
+
+    it "lets you abbreviate match with m", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.match.patterns[0].match).toBe "match"
+
+    it "lets you abbreviate captures for match with c", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.match.patterns[0].captures).toEqual {1: {name: "hello world.my-grammar"}}

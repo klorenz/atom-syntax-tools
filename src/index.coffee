@@ -1,112 +1,171 @@
-make_regex = (regex, macros) ->
-  if regex instanceof RegExp
-    regex = regex.source
-
-  regex.replace /// \{(\w+)\} ///g, (mob) ->
-    if macros[mob[1]]?
-      macros[mob[1]]
-    else
-      mob[0]
 
 # Transforms an easy grammar specification object into a tmLanguage grammar
 # specification object.
-#
-# n -> name
-# N -> contentName
-# p -> patterns
-# i -> include
-# m -> match
-# b -> begin
-# e -> end
-# c -> captures/beginCaptures
-# C -> endCaptures
-# x -> extendedContext
-#
-make_pattern = (pattern, macros) ->
-  pat = pattern
-  P   = {}
+class GrammarCreator
+  constructor: (@grammar, @print = false) ->
 
-  if typeof pattern == "string"
-    P.include = pattern
+  process: ->
+    grammar = @grammar
+    print = @print
+    G = {}
+
+    for n in [ "comment", "fileTypes", "firstLineMatch", "keyEquivalent", "name", "scopeName" ]
+      G[n] = grammar[n] if grammar[n]?
+
+    {@autoAppendScopeName, @macros} = grammar
+
+    @autoAppendScopeName = true if typeof @autoAppendScopeName is "undefined"
+    @macros = {} if typeof @macros is "undefined"
+    @grammarScopeName = G.scopeName.replace /.*\./, ''
+
+    @hasGrammarScopeName = new RegExp "\\.#{@grammarScopeName}$"
+
+    macros = @macros
+
+    # make regexes to strings
+    for k,v of macros
+      if v instanceof RegExp
+        macros[k] = v.source
+
+    # resolve macros
+    for k,v of macros
+      macros[k] = @resolveMacros(v)
+
+    loop
+      all_done = true
+      for k,v of macros
+        macros[k] = @resolveMacros(v)
+
+        if /\{[a-zA-Z_]\w*\}/.test(macros[k])
+          all_done = false
+          if v == macros[k]
+            throw "unresolved macro in #{v}"
+
+      if all_done
+        break
+
+    for k,v of @makePattern(grammar)
+      G[k] = v
+
+    if grammar.repository?
+      G.repository = {}
+      for k,v of grammar.repository
+        pats = @makePattern(v, macros)
+        if pats.begin? or pats.match?
+          pats = { "patterns": [ pats ] }
+        else if pats instanceof Array
+          pats = { "patterns": pats }
+
+        G.repository[k] = pats
+
+    if print
+      if print == "CSON"
+        CSON = require "CSON"
+        process.stdout.write CSON.stringify(G)
+      else
+        process.stdout.write JSON.stringify(G, null, "    ")
+
+    G
+
+  resolveMacros: (regex) ->
+    if regex instanceof RegExp
+      regex = regex.source
+
+    macros = @macros
+
+    regex.replace /// \{\w+\} ///g, (mob) ->
+      s = mob[1...-1]
+
+      if typeof macros[s] isnt "undefined"
+        macros[s]
+      else
+        mob
+
+  makeScopeName: (name) ->
+    name = @resolveMacros(name)
+    if @autoAppendScopeName
+      if not @hasGrammarScopeName.test(name)
+        return "#{name}.#{@grammarScopeName}"
+
+    name
+
+  # Transforms an easy grammar specification object into a tmLanguage grammar
+  # specification object.
+  #
+  # n -> name
+  # N -> contentName
+  # p -> patterns
+  # i -> include
+  # m -> match
+  # b -> begin
+  # e -> end
+  # c -> captures/beginCaptures
+  # C -> endCaptures
+  # L -> applyEndPatternLast
+  #
+  makePattern: (pattern) ->
+    pat = pattern
+    P   = {}
+
+    if typeof pattern == "string"
+      P.include = pattern
+      P
+
+    for k,v of pat
+      switch k
+        when "N", "contentName"
+          P.contentName = @makeScopeName(v)
+        when "i", "include"
+          P.include = v
+        when "n", "name"
+          P.name  = @makeScopeName(v)
+        when "m", "match"
+          P.match = @resolveMacros(v)
+        when "b", "begin"
+          P.begin = @resolveMacros(v)
+        when "e", "end"
+          P.end   = @resolveMacros(v)
+
+        when "c", "captures", "beginCaptures"
+          if P.begin?
+            P.beginCaptures = c = {}
+          else
+            P.captures = c = {}
+
+          if typeof v == "string"
+            c[0] = { name: @makeScopeName(v) }
+          else
+            for ck,cv of v
+              if typeof cv isnt "string"
+                c[ck] = @makePattern(cv)
+              else
+                c[ck] = { name: @makeScopeName(cv) }
+
+        when "C", "endCaptures"
+          P.endCaptures = c = {}
+          if typeof v == "string"
+            c[0] = { name: @makeScopeName(v) }
+          else
+            for ck,cv of v
+              if typeof cv isnt "string"
+                c[ck] = @makePattern(cv)
+              else
+                c[ck] = { name: @makeScopeName(cv) }
+
+        when "p", "patterns"
+          if not v instanceof Array
+            v = [ v ]
+          P.patterns = (@makePattern(p) for p in v)
+
+        when "L", "applyPatternLast"
+          P.applyPatternLast = v
+
+        else
+          P[k] = v
+
     P
 
-  for k,v of pat
-    switch k
-      when "n", "name"
-        P.name = pat[k]
-      when "N", "contentName"
-        P.contentName = pat[k]
-      when "i", "include"
-        P.include     = pat[k]
-      when "m", "match"
-        P.match       = make_regex(pat[k], macros)
-      when "b", "begin"
-         P.begin      = make_regex(pat[k], macros)
-      when "e", "end"
-         P.end        = make_regex(pat[k], macros)
-      when "x", "extendedContext"
-        P.extendedContext = pat[k]
-
-      when "c", "captures", "beginCaptures"
-        if P.begin?
-          P.beginCaptures = c = {}
-        else
-          P.captures = c = {}
-        for k,v of pat[k]
-          c[k] = make_pattern(v, macros)
-
-      when "C", "endCaptures"
-        P.endCaptures = c = {}
-        for k,v of pat[k]
-          c[k] = make_pattern(v, macros)
-
-      when "p", "patterns"
-        P.patterns = make_pattern(p, macros) for p in pat[k]
-
-  P
-
-
-# Transforms an easy grammar specification object into a tmLanguage grammar
-# specification object.
 makeGrammar = (grammar, print = false) ->
-  G = {}
-  for n in [ "comment", "fileTypes", "firstLineMatch", "keyEquivalent", "name" ]
-    if grammar[n]?
-      G[n] = grammar[n]
-
-  # resolve macros
-  macros = if grammar.macros? then grammar.macros else {}
-  for k,v of macros
-    macros[k] = make_regex(v,macros)
-
-  loop
-    all_done = true
-    for k,v of macros
-      macros[k] = make_regex(v,macros)
-
-      if /\{[a-zA-Z_]\w*\}/.test(macros[k])
-        all_done = false
-        if v == macros[k]
-          throw "unresolved macro in #{v}"
-
-    if all_done
-      break
-
-  for k,v in make_pattern(grammar)
-    G[k] = v
-
-  if grammar.repository?
-    G.repository = {}
-    for k,v of grammar.repository
-      G.repository[k] = make_pattern(v, macros)
-
-  if print
-    if print == "CSON"
-      CSON = require "CSON"
-      process.stdout.write CSON.stringify(G)
-    else
-      process.stdout.write JSON.stringify(G, null, "    ")
-
-  G
+  (new GrammarCreator grammar, print).process()
 
 module.exports = makeGrammar
