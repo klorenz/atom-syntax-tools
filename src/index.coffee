@@ -84,7 +84,7 @@ class GrammarCreator
   makeScopeName: (name) ->
     name = @resolveMacros(name)
     if @autoAppendScopeName
-      if not @hasGrammarScopeName.test(name)
+      unless @hasGrammarScopeName.test(name)
         return "#{name}.#{@grammarScopeName}"
 
     name
@@ -153,7 +153,7 @@ class GrammarCreator
                 c[ck] = { name: @makeScopeName(cv) }
 
         when "p", "patterns"
-          if not v instanceof Array
+          unless v instanceof Array
             v = [ v ]
           P.patterns = (@makePattern(p) for p in v)
 
