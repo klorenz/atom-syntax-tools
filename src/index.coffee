@@ -157,8 +157,8 @@ class GrammarCreator
             v = [ v ]
           P.patterns = (@makePattern(p) for p in v)
 
-        when "L", "applyPatternLast"
-          P.applyPatternLast = v
+        when "L", "applyEndPatternLast"
+          P.applyEndPatternLast = v
 
         else
           P[k] = v
