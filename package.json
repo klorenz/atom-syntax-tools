@@ -1,6 +1,6 @@
 {
   "name": "atom-syntax-tools",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Tool for grammar specification with coffee script for atom languages",
   "main": "lib/main.js",
   "scripts": {
