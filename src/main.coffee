@@ -9,7 +9,7 @@ class GrammarCreator
     print = @print
     G = {}
 
-    for n in [ "comment", "fileTypes", "firstLineMatch", "keyEquivalent", "name", "scopeName" ]
+    for n in [ "comment", "fileTypes", "firstLineMatch", "keyEquivalent", "name", "scopeName", "injectionSelector" ]
       G[n] = grammar[n] if grammar[n]?
 
     {@autoAppendScopeName, @macros} = grammar
@@ -44,8 +44,11 @@ class GrammarCreator
       if all_done
         break
 
+    name = grammar['name']
     for k,v of @makePattern(grammar)
       G[k] = v
+
+    G['name'] = name
 
     if grammar.repository?
       G.repository = {}
@@ -60,7 +63,7 @@ class GrammarCreator
 
     if print
       if print == "CSON"
-        CSON = require "CSON"
+        CSON = require "season"
         process.stdout.write CSON.stringify(G)
       else
         process.stdout.write JSON.stringify(G, null, "    ")
@@ -109,7 +112,10 @@ class GrammarCreator
 
     if typeof pattern == "string"
       P.include = pattern
-      P
+      return P
+
+    if pattern instanceof Array
+      return (@makePattern(p) for p in pattern)
 
     for k,v of pat
       switch k

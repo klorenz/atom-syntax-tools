@@ -2,7 +2,7 @@
   "name": "atom-syntax-tools",
   "version": "0.2.1",
   "description": "Tool for grammar specification with coffee script for atom languages",
-  "main": "index.js",
+  "main": "lib/main.js",
   "scripts": {
     "test": "cake test"
   },
@@ -27,5 +27,8 @@
   "engines": {
     "atom": ">=0.90"
   },
-  "homepage": "https://github.com/klorenz/atom-syntax-tools"
+  "homepage": "https://github.com/klorenz/atom-syntax-tools",
+  "dependencies": {
+    "season": "^2.0.0"
+  }
 }
