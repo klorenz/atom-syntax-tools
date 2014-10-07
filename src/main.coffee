@@ -62,9 +62,19 @@ class GrammarCreator
         G.repository[k] = pats
 
     if print
-      if print == "CSON"
+      if print.match /\.cson$/
+        CSON = require "season"
+        fs   = require "fs"
+
+        fs.writeFileSync print, CSON.stringify(G)
+
+      else if print.match /\.json$/
+        fs.writeFileSync print, JSON.stringify(G, null, "    ")
+
+      else if print == "CSON"
         CSON = require "season"
         process.stdout.write CSON.stringify(G)
+
       else
         process.stdout.write JSON.stringify(G, null, "    ")
 
