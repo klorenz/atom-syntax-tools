@@ -4,7 +4,8 @@
   "description": "Tool for grammar specification with coffee script for atom languages",
   "main": "lib/main.js",
   "scripts": {
-    "test": "cake test"
+    "test": "cake test",
+    "prepublish": "cake build"
   },
   "repository": {
     "type": "git",

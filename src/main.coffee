@@ -1,3 +1,11 @@
+"""
+$ curl https://raw.githubusercontent.com/twilson63/cakefile-template/master/Cakefile > ../Cakefile
+
+$ cd .. && coffee -c -o lib src/main.coffee
+$ cd .. && npm version minor
+$ cd .. && git comm
+$ cd .. && cake build
+"""
 
 # Transforms an easy grammar specification object into a tmLanguage grammar
 # specification object.
