@@ -192,4 +192,9 @@ class GrammarCreator
 makeGrammar = (grammar, print = false) ->
   (new GrammarCreator grammar, print).process()
 
-module.exports = makeGrammar
+{Grammar} = require 'first-mate'
+
+createGrammar = (grammar) ->
+  new Grammar makeGrammar grammar
+
+module.exports = {makeGrammar, createGrammar}
