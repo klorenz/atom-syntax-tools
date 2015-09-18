@@ -195,6 +195,6 @@ makeGrammar = (grammar, print = false) ->
 {Grammar} = require 'first-mate'
 
 createGrammar = (grammar) ->
-  new Grammar makeGrammar grammar
+  new Grammar atom.grammars, makeGrammar grammar
 
 module.exports = {makeGrammar, createGrammar}
