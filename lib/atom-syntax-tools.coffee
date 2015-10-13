@@ -5,20 +5,111 @@ $ cd .. && coffee -c -o lib src/main.coffee
 $ cd .. && npm version minor
 $ cd .. && git comm
 $ cd .. && cake build
+
+$ npm install --save underscore
+  underscore@1.8.3 ../node_modules/underscore
+
 """
 
-resolveRegexp = (r) ->
-  if r instanceof RegExp
-     r = r.source
-     flags = ''
-     if v.ignoreCase
-       flags += 'i'
-     if v.multiline
-       flags += 'm'
-     if flags
-       r = "(?#{flags})#{r}"
 
-  return r
+
+resolveRegexp = (r) ->
+  s = r
+  if r instanceof RegExp
+    s = r.source
+    flags = ''
+    if r.ignoreCase
+      flags += 'i'
+    if r.multiline
+      flags += 'm'
+    if flags
+      s = "(?#{flags})#{s}"
+
+  return s
+
+# http://stackoverflow.com/questions/1916218/find-the-longest-common-starting-substring-in-a-set-of-stringshttp://stackoverflow.com/questions/1916218/find-the-longest-common-starting-substring-in-a-set-of-strings
+
+# get sorted words
+sharedStart = (words) ->
+  w1 = words[0]
+  w2 = words[words.length-1]
+  L  = w1.length
+  i  = 0
+
+  while i < L && w1.charAt(i) == w2.charAt(i)
+    i++
+
+  w1[...i]
+
+
+makeRegexFromWords = (wordlists...) ->
+  all_words = []
+  for words in wordlists
+    if words not instanceof Array
+      words = [ words ]
+    for w in words
+      all_words.push w
+
+  _makeRegexFromWords = (words) ->
+    debugger
+    prefix_words = words
+
+    other_words = []
+
+    # TODO: make this divide and conquer
+    c = prefix_words[0][0]
+    j = prefix_words.length-1
+    range = j
+    while true
+      range = Math.ceil(range/2)
+
+      if prefix_words[j][0] == c
+        if j+1 == prefix_words.length
+          break
+
+        if prefix_words[j+1][0] != c
+          other_words = prefix_words[j+1...]
+          prefix_words = prefix_words[..j]
+          break
+
+        j += range
+
+      if prefix_words[j][0] != c
+        j -= range
+
+    result = []
+
+    if prefix_words.length == 1
+      result = [ prefix_words[0] ]
+    else
+      prefix = sharedStart prefix_words
+      suffixes = (w[prefix.length...] for w in prefix_words)
+
+      is_optional = false
+      if '' in suffixes
+        is_optional = true
+        suffixes.splice(suffixes.indexOf(''), 1)
+
+      result = prefix + "(?:"+_makeRegexFromWords(suffixes).join("|")+")"
+      if is_optional
+        result += "?"
+
+      result = [ result ]
+
+    if other_words.length
+      for r in _makeRegexFromWords other_words
+        result.push r
+
+    return result
+
+  all_words.sort()
+
+  result = _makeRegexFromWords(all_words)
+
+  if result.length == 1
+    return result[0]
+
+  return "(?:" +  result.join("|") + ")"
 
 
 # Transforms an easy grammar specification object into a tmLanguage grammar
@@ -46,8 +137,7 @@ class GrammarCreator
 
     # make regexes to strings
     for k,v of macros
-      makros[k] = resolveRegexp(v)
-
+      macros[k] = resolveRegexp(v)
 
     # resolve macros
     for k,v of macros
@@ -58,7 +148,7 @@ class GrammarCreator
       for k,v of macros
         macros[k] = @resolveMacros(v)
 
-        if m = macros[k].match/\{[a-zA-Z_]\w*\}/g
+        if m = macros[k].match /\{[a-zA-Z_]\w*\}/g
           _count = m.length
           if m = macros[k].match /\\x\{[a-f0-9A-F]+\}/g
             _charrefs = m.length
@@ -223,9 +313,9 @@ class GrammarCreator
 makeGrammar = (grammar, print = false) ->
   (new GrammarCreator grammar, print).process()
 
-{Grammar} = require 'first-mate'
+# {Grammar} = require 'first-mate'
 
-createGrammar = (grammar) ->
-  new Grammar atom.grammars, makeGrammar grammar
+createGrammar = (filename, grammar) ->
+  atom.grammars.createGrammar filename, makeGrammar grammar
 
-module.exports = {makeGrammar, createGrammar}
+module.exports = {makeGrammar, createGrammar, makeRegexFromWords}

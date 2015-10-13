@@ -29,7 +29,8 @@
   },
   "homepage": "https://github.com/klorenz/atom-syntax-tools",
   "dependencies": {
+    "coffee-script": "*",
     "season": "^2.0.0",
-    "coffee-script": "*"
+    "underscore": "^1.8.3"
   }
 }

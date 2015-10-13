@@ -1,4 +1,4 @@
-makeGrammar = require '../lib/main.js'
+{makeGrammar, makeRegexFromWords} = require '../lib/atom-syntax-tools.coffee'
 
 describe "Atom Syntax Tools", ->
 
@@ -10,6 +10,7 @@ describe "Atom Syntax Tools", ->
         ident: /[a-zA-Z_]\w*/
         digits: /\d+/
         item_getter: /(?:{digits}|{ident})/
+        ignoreCase: /foo/i
 
       patterns: [
         { match: /// {ident} /// }
@@ -23,6 +24,25 @@ describe "Atom Syntax Tools", ->
     it "expands nested macros", ->
       g = makeGrammar inputGrammar
       expect(g.patterns[1].match).toBe("[a-zA-Z_]\\w*\\[(?:\\d+|[a-zA-Z_]\\w*)\\]")
+
+    it "can handle ignore case", ->
+      g = makeGrammar inputGrammar
+      expect(g.macros['ignoreCase']).toBe("(?i)foo")
+
+  describe "makeRegexFromWords", ->
+
+    it "can make regexes from words 1", ->
+      expect(makeRegexFromWords "STDIN", "STDOUT", "STDERR").toBe(/STD(?:ERR|IN|OUT)/.source)
+
+    it "can make regexes from words 2", ->
+      expect(makeRegexFromWords ["STDIN", "STDINOUT", "STDERR"]).toBe(/STD(?:ERR|IN(?:OUT)?)/.source)
+
+    it "can make regexes from words 3", ->
+      expect(makeRegexFromWords ["STDIN", "STDINOUT", "STDINERR", "STDERR"]).toBe(/STD(?:ERR|IN(?:ERR|OUT)?)/.source)
+
+    it "can make regexes from words 4", ->
+      expect(makeRegexFromWords ["STDIN", "STDINOUT", "STDINERR", "xTDERR"]).toBe(/(?:STDIN(?:ERR|OUT)?|xTDERR)/.source)
+
 
 
   describe "when you want to keep your grammar short", ->
