@@ -7,6 +7,20 @@ $ cd .. && git comm
 $ cd .. && cake build
 """
 
+resolveRegexp = (r) ->
+  if r instanceof RegExp
+     r = r.source
+     flags = ''
+     if v.ignoreCase
+       flags += 'i'
+     if v.multiline
+       flags += 'm'
+     if flags
+       r = "(?#{flags})#{r}"
+
+  return r
+
+
 # Transforms an easy grammar specification object into a tmLanguage grammar
 # specification object.
 class GrammarCreator
@@ -32,8 +46,8 @@ class GrammarCreator
 
     # make regexes to strings
     for k,v of macros
-      if v instanceof RegExp
-        macros[k] = v.source
+      makros[k] = resolveRegexp(v)
+
 
     # resolve macros
     for k,v of macros
@@ -44,10 +58,17 @@ class GrammarCreator
       for k,v of macros
         macros[k] = @resolveMacros(v)
 
-        if /\{[a-zA-Z_]\w*\}/.test(macros[k])
-          all_done = false
-          if v == macros[k]
-            throw "unresolved macro in #{v}"
+        if m = macros[k].match/\{[a-zA-Z_]\w*\}/g
+          _count = m.length
+          if m = macros[k].match /\\x\{[a-f0-9A-F]+\}/g
+            _charrefs = m.length
+          else
+            _charrefs = 0
+
+          if _count - _charrefs > 0
+            all_done = false
+            if v == macros[k]
+              throw "unresolved macro in #{v}"
 
       if all_done
         break
@@ -69,6 +90,17 @@ class GrammarCreator
 
         G.repository[k] = pats
 
+    if grammar.injections?
+      G.injections = {}
+      for k,v of grammar.injections
+        pats = @makePattern(v, macros)
+        if pats.begin? or pats.match?
+          pats = { "patterns": [ pats ] }
+        else if pats instanceof Array
+          pats = { "patterns": pats }
+
+        G.injections[k.replace(/\s+/, ' ')] = pats
+
     if print
       if print.match /\.cson$/
         CSON = require "season"
@@ -89,8 +121,7 @@ class GrammarCreator
     G
 
   resolveMacros: (regex) ->
-    if regex instanceof RegExp
-      regex = regex.source
+    regex = resolveRegexp(regex)
 
     macros = @macros
 

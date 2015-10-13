@@ -1,4 +1,4 @@
-makeGrammar = require '../index.js'
+makeGrammar = require '../lib/main.js'
 
 describe "Atom Syntax Tools", ->
 

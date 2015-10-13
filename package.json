@@ -22,7 +22,6 @@
     "url": "https://github.com/klorenz/atom-syntax-tools/issues"
   },
   "devDependencies": {
-    "coffee-script": "*",
     "jasmine-focused": "*"
   },
   "engines": {
@@ -30,7 +29,7 @@
   },
   "homepage": "https://github.com/klorenz/atom-syntax-tools",
   "dependencies": {
-    "first-mate": "^5.0.0",
-    "season": "^2.0.0"
+    "season": "^2.0.0",
+    "coffee-script": "*"
   }
 }
