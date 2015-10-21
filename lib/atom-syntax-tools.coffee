@@ -114,7 +114,7 @@ makeRegexFromWords = (wordlists...) ->
     return result
 
   all_words.sort()
-  all_words = (w.replace(/\W/, '\\$1') for w in uniq all_words)
+  all_words = (w.replace(/\W/, (m) -> '\\'+m) for w in uniq all_words)
 
   result = _makeRegexFromWords(all_words)
 
@@ -382,5 +382,6 @@ createGrammar = (filename, grammar) ->
   atom.grammars.createGrammar filename, makeGrammar grammar
 
 makeRule = rule = (opts) -> opts
+include = (s) -> include: s
 
 module.exports = {makeGrammar, createGrammar, makeRegexFromWords, makeWords, rule, makeRule}
