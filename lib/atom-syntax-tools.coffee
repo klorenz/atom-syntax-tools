@@ -196,6 +196,11 @@ class GrammarCreator
     if 'macros' of G
       delete G.macros
 
+    # resolve final macros
+    for k,v of G
+      if v instanceof RegExp or typeof v is 'string'
+        G[k] = @resolveMacros(v)
+
     if print
       if print.match /\.cson$/
         CSON = require "season"
