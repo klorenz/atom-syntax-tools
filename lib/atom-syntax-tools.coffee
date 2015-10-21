@@ -11,12 +11,13 @@ $ npm install --save underscore
 
 """
 
+{uniq} = require "underscore"
 
 
 resolveRegexp = (r) ->
   s = r
   if r instanceof RegExp
-    s = r.source
+    s = r.source.replace /\\\//g, "/"
     flags = ''
     if r.ignoreCase
       flags += 'i'
@@ -44,17 +45,21 @@ sharedStart = (words) ->
 
 makeRegexFromWords = (wordlists...) ->
   all_words = []
-  for words in wordlists
-    if words not instanceof Array
-      words = [ words ]
-    for w in words
-      all_words.push w
 
-  _makeRegexFromWords = (words) ->
-    debugger
-    prefix_words = words
+  all_words = makeWords wordlists...
+
+  # for words in wordlists
+  #   if words not instanceof Array
+  #     words = makeWords
+  #   for w in words
+  #     all_words.push w
+
+  _makeRegexFromWords = (prefix_words) ->
+    #debugger
 
     other_words = []
+
+    return [] unless prefix_words.length
 
     # TODO: make this divide and conquer
     c = prefix_words[0][0]
@@ -76,6 +81,7 @@ makeRegexFromWords = (wordlists...) ->
 
       if prefix_words[j][0] != c
         j -= range
+        j = 0 if j < 0
 
     result = []
 
@@ -90,9 +96,14 @@ makeRegexFromWords = (wordlists...) ->
         is_optional = true
         suffixes.splice(suffixes.indexOf(''), 1)
 
-      result = prefix + "(?:"+_makeRegexFromWords(suffixes).join("|")+")"
-      if is_optional
-        result += "?"
+      result = prefix
+      if suffixes.length
+        result += "(?:"+_makeRegexFromWords(suffixes).join("|")+")"
+        if is_optional
+          result += "?"
+      else
+        if is_optional
+          result = "(?:#{result})?"
 
       result = [ result ]
 
@@ -103,11 +114,15 @@ makeRegexFromWords = (wordlists...) ->
     return result
 
   all_words.sort()
+  all_words = (w.replace(/\W/, '\\$1') for w in uniq all_words)
 
   result = _makeRegexFromWords(all_words)
 
   if result.length == 1
     return result[0]
+
+  if result.length == 0
+    return ''
 
   return "(?:" +  result.join("|") + ")"
 
@@ -122,7 +137,10 @@ class GrammarCreator
     print = @print
     G = {}
 
-    for n in [ "comment", "fileTypes", "firstLineMatch", "keyEquivalent", "name", "scopeName", "injectionSelector" ]
+    for n in [ "comment", "fileTypes", "firstLineMatch", "keyEquivalent",
+      "name", "scopeName", "injectionSelector", 'injections',
+      'foldingStartMarker', 'foldingStopMarker'
+      ]
       G[n] = grammar[n] if grammar[n]?
 
     {@autoAppendScopeName, @macros} = grammar
@@ -164,32 +182,19 @@ class GrammarCreator
         break
 
     name = grammar['name']
-    for k,v of @makePattern(grammar)
+    for k,v of @makePattern(grammar, skipInjections: true)
       G[k] = v
 
     G['name'] = name
 
     if grammar.repository?
-      G.repository = {}
-      for k,v of grammar.repository
-        pats = @makePattern(v, macros)
-        if pats.begin? or pats.match?
-          pats = { "patterns": [ pats ] }
-        else if pats instanceof Array
-          pats = { "patterns": pats }
-
-        G.repository[k] = pats
+      G.repository = @makeRepository grammar.repository
 
     if grammar.injections?
-      G.injections = {}
-      for k,v of grammar.injections
-        pats = @makePattern(v, macros)
-        if pats.begin? or pats.match?
-          pats = { "patterns": [ pats ] }
-        else if pats instanceof Array
-          pats = { "patterns": pats }
+      G.injections = @makeInjections grammar.injections
 
-        G.injections[k.replace(/\s+/, ' ')] = pats
+    if 'macros' of G
+      delete G.macros
 
     if print
       if print.match /\.cson$/
@@ -231,6 +236,31 @@ class GrammarCreator
 
     name
 
+
+  makeInjections: (injections) ->
+    result = {}
+    for k,v of injections
+      pats = @makePattern(v, @macros)
+      if pats.begin? or pats.match?
+        pats = { "patterns": [ pats ] }
+      else if pats instanceof Array
+        pats = { "patterns": pats }
+
+      result[k.replace(/\s+/g, ' ')] = pats
+    result
+
+  makeRepository: (repository) ->
+    result = {}
+    for k,v of repository
+      pats = @makePattern(v, @macros)
+      if pats.begin? or pats.match?
+        pats = { "patterns": [ pats ] }
+      else if pats instanceof Array
+        pats = { "patterns": pats }
+
+      result[k] = pats
+    result
+
   # Transforms an easy grammar specification object into a tmLanguage grammar
   # specification object.
   #
@@ -238,6 +268,8 @@ class GrammarCreator
   # N -> contentName
   # p -> patterns
   # i -> include
+  # I -> injections
+  # R -> repository
   # m -> match
   # b -> begin
   # e -> end
@@ -245,7 +277,7 @@ class GrammarCreator
   # C -> endCaptures
   # L -> applyEndPatternLast
   #
-  makePattern: (pattern) ->
+  makePattern: (pattern, opts={}) ->
     pat = pattern
     P   = {}
 
@@ -270,6 +302,12 @@ class GrammarCreator
           P.begin = @resolveMacros(v)
         when "e", "end"
           P.end   = @resolveMacros(v)
+        when "I", "injections"
+          unless opts.skipInjections
+            P.injections = @makeInjections(v)
+
+        when "R", "repository"
+          P.repository = @makeRepository(v)
 
         when "c", "captures", "beginCaptures"
           if P.begin?
@@ -279,6 +317,8 @@ class GrammarCreator
 
           if typeof v == "string"
             c[0] = { name: @makeScopeName(v) }
+          else if v instanceof Array
+            c[0] = { patterns: @makePattern(v) }
           else
             for ck,cv of v
               if typeof cv isnt "string"
@@ -290,12 +330,16 @@ class GrammarCreator
           P.endCaptures = c = {}
           if typeof v == "string"
             c[0] = { name: @makeScopeName(v) }
+          else if v instanceof Array
+            c[0] = { patterns: @makePattern(v) }
           else
             for ck,cv of v
-              if typeof cv isnt "string"
-                c[ck] = @makePattern(cv)
-              else
+              if typeof cv is "string"
                 c[ck] = { name: @makeScopeName(cv) }
+              else if cv instanceof Array
+                c[ck] = { patterns: @makePattern(cv) }
+              else
+                c[ck] = @makePattern(cv)
 
         when "p", "patterns"
           unless v instanceof Array
@@ -310,12 +354,26 @@ class GrammarCreator
 
     P
 
+makeWords = (strings...) ->
+  words = []
+  for s in strings
+    if s instanceof Array
+      words.push s...
+    else
+      for w in s.trim().split /\s+/
+        words.push w
+
+  return words
+
 makeGrammar = (grammar, print = false) ->
-  (new GrammarCreator grammar, print).process()
+  r = (new GrammarCreator grammar, print).process()
+  r
 
 # {Grammar} = require 'first-mate'
 
 createGrammar = (filename, grammar) ->
   atom.grammars.createGrammar filename, makeGrammar grammar
 
-module.exports = {makeGrammar, createGrammar, makeRegexFromWords}
+makeRule = rule = (opts) -> opts
+
+module.exports = {makeGrammar, createGrammar, makeRegexFromWords, makeWords, rule, makeRule}

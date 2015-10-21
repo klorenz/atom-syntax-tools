@@ -22,6 +22,7 @@ Tools for easier language grammar specification for atom editor.
   |    N     | contentName            |
   |    p     | patterns               |
   |    i     | include                |
+  |    I     | injections             |
   |    m     | match                  |
   |    b     | begin                  |
   |    e     | end                    |
@@ -33,7 +34,7 @@ Tools for easier language grammar specification for atom editor.
 Here a little example, how to produce `json.cson` file:
 
 ```coffeescript
-{makeGrammar} = require('atom-syntax-tools')
+{makeGrammar, rule} = require('atom-syntax-tools')
 
 grammar =
   name: "JSON"
@@ -62,14 +63,15 @@ grammar =
       C: "{pd}.array.end"
       p: [
         "#value"
-        {
+
+        rule
           m: /,/
           n: "{ps}.array"
-        }
-        {
+
+        rule
           m: /[^\s\]]/
           n: "{ii}.expected-array-separator"
-        }
+
       ]
     constant:
       n: "constant.language"
@@ -89,7 +91,7 @@ grammar =
           [1-9]   # a 1-9 character
           \d*     # followed by zero or more digits
         )
-        (?:
+        (?:       # optional decimal portion
           (?:
             \.    # a period
             \d+   # followed by one or more digits
@@ -99,8 +101,8 @@ grammar =
             [+-]? # followed by an optional +/-
             \d+   # followed by one of more digits
           )?      # make exponent optional
-        )?        # make decimal portion optional
-      ///
+        )? ///
+
     object:
       # "a JSON object"
       n: "meta.structure.dictionary"
@@ -110,7 +112,8 @@ grammar =
       C: "{pd}.dictionary.end"
       p: [
         "#string"   # JSON object key
-        {
+
+        rule
           b: /:/
           c: "{ps}.dictionary.key-value"
           e: /(,)|(?=\})/
@@ -119,13 +122,13 @@ grammar =
           n: "meta.structure.dictionary.value"
           p: [
             "#value" # JSON object value
-            { m: /[^\s,]/, n: "{ii}.expected-dictionary-separator" }
+            rule m: /[^\s,]/, n: "{ii}.expected-dictionary-separator"
           ]
-        }
-        {
+
+        rule
           m: /[^\s\}]/
           n: "{ii}.expected-dictionary-separator"
-        }
+
       ]
     string:
       b: /"/
@@ -134,7 +137,7 @@ grammar =
       C: "{pd}.definition.string.end"
       n: "string.quoted.double"
       p: [
-        {
+        rule
           n: "constant.character.escape"
           m: ///
             \\               # literal backslash
@@ -143,10 +146,8 @@ grammar =
               |              # ...or...
               u              # a u
               {hexdigit}{4}  # and four hex digits
-            )
-          ///
-        }
-        {
+            ) ///
+        rule
           m: /\\./
           n: "{ii}.unrecognized-string-escape"
         }
@@ -164,14 +165,62 @@ makeGrammar grammar, "CSON"
 
 Then run your script with `coffee grammar-json.coffee > json.cson`
 
+Or create grammar directly with
+```
+    {CompositeDisposable} = require 'atom'
+    subscriptions = new CompositeDisposable
+    subscriptions.add atom.grammars.createGrammar __filename, makeGrammar grammar
+```
 
-Further Infos
--------------
+Here an example for a package code for a complete dynamical managed grammar:
 
-See spec for examples.  More documentation will follow.
+```
+{CompositeDisposable} = require 'atom'
+grammar = require './my-grammar.coffee'
 
+module.exports =
+  activate: (state) ->
+    @subscriptions = new CompositeDisposable
+    @subscriptions.add atom.grammars.createGrammar __filename, makeGrammar grammar
 
-TODO
-----
+  deactivate: ->
+    @subscriptions.dispose()
 
-Support grammar injections.
+  serialize: ->
+```
+
+Functions exported
+------------------
+
+``makeGrammar grammar, [format | path]``
+  Create and return a grammar object from input grammar `grammar`.  If format
+  given print a `CSON` or `JSON` string to STDOUT, if `path` given, write
+  grammar to file.  It can be a `.json` or `.cson` file.
+
+``makeWords {string | list}...``  
+  This will split all given strings at whitespace and return a list of strings.
+  Given lists are taken returned unchanged
+
+``rule obj``, ``makeRule obj``
+  Return the obj. This is a convenience method for nicer separating rules in
+  pattern lists.
+
+``makeRegexFromWords {string | list}...``
+  arguments are processed by ``makeWords()``.  Then there is created an optimized
+  regex from it like in following example:
+  ```coffeescript
+  makeRegexFromWords """
+    STDIN
+    STDOUT
+    STDERR
+  """
+  # returns "STD(?:ERR|IN|OUT)"
+
+  makeRegexFromWords """
+    STDIN
+    STDINOUT
+    STDERR
+    .OTHER
+  """
+  # returns "(?:STD(?:ERR|IN(?:OUT)?)|\\.OTHER)"
+  ```

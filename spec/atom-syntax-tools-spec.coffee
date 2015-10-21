@@ -43,6 +43,12 @@ describe "Atom Syntax Tools", ->
     it "can make regexes from words 4", ->
       expect(makeRegexFromWords ["STDIN", "STDINOUT", "STDINERR", "xTDERR"]).toBe(/(?:STDIN(?:ERR|OUT)?|xTDERR)/.source)
 
+    it "can make regexes from words 5", ->
+      expect(makeRegexFromWords ["STDIN"]).toBe('STDIN')
+
+    it "can make regexes from words 6", ->
+      expect(makeRegexFromWords []).toBe('')
+
 
 
   describe "when you want to keep your grammar short", ->
@@ -69,6 +75,9 @@ describe "Atom Syntax Tools", ->
           m: /// match ///
           c: { 1: "hello world" }
 
+        one_more_block:
+          p: "#match"
+
     it "lets you abbreviate name with n", ->
       g = makeGrammar inputGrammar
       expect(g.repository.block.patterns[0].name).toBe("string.quoted.double.my-grammar")
@@ -80,6 +89,10 @@ describe "Atom Syntax Tools", ->
     it "lets you abbreviate begin with b", ->
       g = makeGrammar inputGrammar
       expect(g.repository.block.patterns[0].begin).toBe("beginhere")
+
+    it "lets you use an (include) string as pattern", ->
+      g = makeGrammar inputGrammar
+      expect(g.repository.block.patterns[0].patterns).toEqual([ {include: "#match"} ])
 
     it "lets you abbreviate end with e", ->
       g = makeGrammar inputGrammar
