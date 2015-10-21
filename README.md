@@ -193,19 +193,23 @@ Functions exported
 ------------------
 
 ``makeGrammar grammar, [format | path]``
+
   Create and return a grammar object from input grammar `grammar`.  If format
   given print a `CSON` or `JSON` string to STDOUT, if `path` given, write
   grammar to file.  It can be a `.json` or `.cson` file.
 
 ``makeWords {string | list}...``
+
   This will split all given strings at whitespace and return a list of strings.
   Given lists are taken returned unchanged
 
 ``rule obj``, ``makeRule obj``
+
   Return the obj. This is a convenience method for nicer separating rules in
   pattern lists.
 
 ``makeRegexFromWords {string | list}...``
+
   arguments are processed by ``makeWords()``.  Then there is created an optimized
   regex from it like in following example:
   ```coffeescript
