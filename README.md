@@ -166,7 +166,7 @@ makeGrammar grammar, "CSON"
 Then run your script with `coffee grammar-json.coffee > json.cson`
 
 Or create grammar directly with
-```
+```coffeescript
     {CompositeDisposable} = require 'atom'
     subscriptions = new CompositeDisposable
     subscriptions.add atom.grammars.createGrammar __filename, makeGrammar grammar
@@ -174,7 +174,7 @@ Or create grammar directly with
 
 Here an example for a package code for a complete dynamical managed grammar:
 
-```
+```coffeescript
 {CompositeDisposable} = require 'atom'
 grammar = require './my-grammar.coffee'
 
@@ -197,7 +197,7 @@ Functions exported
   given print a `CSON` or `JSON` string to STDOUT, if `path` given, write
   grammar to file.  It can be a `.json` or `.cson` file.
 
-``makeWords {string | list}...``  
+``makeWords {string | list}...``
   This will split all given strings at whitespace and return a list of strings.
   Given lists are taken returned unchanged
 
