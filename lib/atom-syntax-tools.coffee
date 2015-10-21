@@ -326,10 +326,12 @@ class GrammarCreator
             c[0] = { patterns: @makePattern(v) }
           else
             for ck,cv of v
-              if typeof cv isnt "string"
-                c[ck] = @makePattern(cv)
-              else
+              if typeof cv is "string"
                 c[ck] = { name: @makeScopeName(cv) }
+              else if cv instanceof Array
+                c[ck] = { patterns: @makePattern(cv) }
+              else
+                c[ck] = @makePattern(cv)
 
         when "C", "endCaptures"
           P.endCaptures = c = {}
