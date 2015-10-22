@@ -1,4 +1,4 @@
-{makeGrammar, makeRegexFromWords} = require '../lib/atom-syntax-tools.coffee'
+{makeGrammar, makeRegexFromWords, escapeRegex} = require '../lib/atom-syntax-tools.coffee'
 
 describe "Atom Syntax Tools", ->
 
@@ -11,6 +11,8 @@ describe "Atom Syntax Tools", ->
         digits: /\d+/
         item_getter: /(?:{digits}|{ident})/
         ignoreCase: /foo/i
+
+      firstLineMatch: /{ignoreCase}/
 
       patterns: [
         { match: /// {ident} /// }
@@ -27,7 +29,7 @@ describe "Atom Syntax Tools", ->
 
     it "can handle ignore case", ->
       g = makeGrammar inputGrammar
-      expect(g.macros['ignoreCase']).toBe("(?i)foo")
+      expect(g.firstLineMatch).toBe("(?i)foo")
 
   describe "makeRegexFromWords", ->
 
@@ -49,7 +51,13 @@ describe "Atom Syntax Tools", ->
     it "can make regexes from words 6", ->
       expect(makeRegexFromWords []).toBe('')
 
-
+    it "can make regexes from non-words 1", ->
+      expect(makeRegexFromWords "$% $(%D) $(%F) $(*D) $(*F) $* $+ $<").toBe(
+       /\$(?:%|\((?:%(?:D\)|F\))|\*(?:D\)|F\)))|\*|\+|<)/.source
+       )
+  describe "escapeRegex", ->
+    it "can escape *", ->
+      expect(escapeRegex '*').toBe '\\*'
 
   describe "when you want to keep your grammar short", ->
 

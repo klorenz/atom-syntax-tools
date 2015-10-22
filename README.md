@@ -208,6 +208,10 @@ Functions exported
   Return the obj. This is a convenience method for nicer separating rules in
   pattern lists.
 
+``escapeRegex string``, ``escapeRegExp string``
+
+  Escape special characters for use in regular expression.
+
 ``makeRegexFromWords {string | list}...``
 
   arguments are processed by ``makeWords()``.  Then there is created an optimized

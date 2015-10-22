@@ -13,6 +13,8 @@ $ npm install --save underscore
 
 {uniq} = require "underscore"
 
+# http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+escapeRegex = escapeRegExp = (r) -> r.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")
 
 resolveRegexp = (r) ->
   s = r
@@ -48,21 +50,13 @@ makeRegexFromWords = (wordlists...) ->
 
   all_words = makeWords wordlists...
 
-  # for words in wordlists
-  #   if words not instanceof Array
-  #     words = makeWords
-  #   for w in words
-  #     all_words.push w
-
   _makeRegexFromWords = (prefix_words) ->
-    #debugger
-
     other_words = []
 
     return [] unless prefix_words.length
 
-    # TODO: make this divide and conquer
     c = prefix_words[0][0]
+
     j = prefix_words.length-1
     range = j
     while true
@@ -86,9 +80,10 @@ makeRegexFromWords = (wordlists...) ->
     result = []
 
     if prefix_words.length == 1
-      result = [ prefix_words[0] ]
+      result = [ escapeRegex(prefix_words[0]) ]
     else
       prefix = sharedStart prefix_words
+
       suffixes = (w[prefix.length...] for w in prefix_words)
 
       is_optional = false
@@ -96,8 +91,9 @@ makeRegexFromWords = (wordlists...) ->
         is_optional = true
         suffixes.splice(suffixes.indexOf(''), 1)
 
-      result = prefix
+      result = escapeRegex prefix
       if suffixes.length
+        console.log "suffixes", suffixes
         result += "(?:"+_makeRegexFromWords(suffixes).join("|")+")"
         if is_optional
           result += "?"
@@ -114,7 +110,9 @@ makeRegexFromWords = (wordlists...) ->
     return result
 
   all_words.sort()
-  all_words = (w.replace(/\W/, (m) -> '\\'+m) for w in uniq all_words)
+
+  #all_words = (escapeRegex(w) for w in uniq all_words)
+  all_words = (w for w in uniq all_words)
 
   result = _makeRegexFromWords(all_words)
 
@@ -384,4 +382,4 @@ createGrammar = (filename, grammar) ->
 makeRule = rule = (opts) -> opts
 include = (s) -> include: s
 
-module.exports = {makeGrammar, createGrammar, makeRegexFromWords, makeWords, rule, makeRule}
+module.exports = {makeGrammar, createGrammar, makeRegexFromWords, makeWords, rule, makeRule, escapeRegex, escapeRegExp}
