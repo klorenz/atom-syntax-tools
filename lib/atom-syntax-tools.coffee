@@ -93,7 +93,6 @@ makeRegexFromWords = (wordlists...) ->
 
       result = escapeRegex prefix
       if suffixes.length
-        console.log "suffixes", suffixes
         result += "(?:"+_makeRegexFromWords(suffixes).join("|")+")"
         if is_optional
           result += "?"
